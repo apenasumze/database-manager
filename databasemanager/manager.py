@@ -103,20 +103,27 @@ class DatabaseManager:
             >>> # SQL Server (MSSQL)
             >>> DatabaseManager.build_url('mssql+pyodbc', 'SIVWIN', 'sa', '123', '192.168.1.10', '1433')
             'mssql+pyodbc://sa:123@192.168.1.10:1433/SIVWIN?driver=ODBC+Driver+17+for+SQL+Server'
-        """        
+        """            
         if driver.lower() == 'sqlite':
+            path = database.replace('\\', '/')
             if database.startswith('\\\\'):
-                path = database.replace('\\', '/')
-                while path.startswith('/'):
-                    path = path[1:]
+                while path.startswith('/'): path = path[1:]
                 return f"sqlite:////{path}"
-            else:
-                path = database.replace('\\', '/')
-                return f"sqlite:///{path}"
-
-        db_url = f"{driver}://{user}:{password}@{host}:{port}/{database}"
+            return f"sqlite:///{path}"
+    
+        # Construção inteligente para evitar "None" na string
+        auth = f"{user}:{password}@" if user and password else ""
+        
+        # Só adiciona a porta se ela for informada e não for vazia
+        host_part = f"{host}" if host else "localhost"
+        if port and str(port).lower() != 'none':
+            host_part += f":{port}"
+    
+        db_url = f"{driver}://{auth}{host_part}/{database}"
+        
         if driver == "mssql+pyodbc":
             db_url += "?driver=ODBC+Driver+17+for+SQL+Server"
+            
         return db_url
 
     @contextmanager
