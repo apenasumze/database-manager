@@ -10,19 +10,26 @@ from sqlalchemy.orm import declarative_base
 from contextlib import contextmanager
 
 class _SQLRaw:
-    """Encapsula o resultado de uma query SQL Raw para permitir conversão em um pandas DataFrame."""
+    """
+    Encapsula o resultado de uma query SQL Raw para permitir conversão em um pandas DataFrame.
+    """
     def __init__(self, data: list):
         self._data = data
 
-    def to_df(self) -> pd.DataFrame:
-        """Converte os dados brutos em um DataFrame do Pandas."""
+    def to_df(self, **kwargs) -> pd.DataFrame:
+        """
+        Converte os dados brutos em um DataFrame do Pandas.
+        Aceita qualquer argumento válido do construtor pd.DataFrame().
+        """
         return pd.DataFrame(self._data)
     
     def __repr__(self):
         return str(self._data)
 
 class _Query(Query):
-    """Extensão da classe Query do SQLAlchemy com injeção dafuncionalidade de conversão para um pandas DataFrame."""
+    """
+    Extensão da classe Query do SQLAlchemy com injeção dafuncionalidade de conversão para um pandas DataFrame.
+    """
     
     def to_df(self, **kwargs) -> pd.DataFrame:
         """
