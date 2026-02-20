@@ -9,8 +9,6 @@ from sqlalchemy.orm.decl_api import DeclarativeMeta
 from sqlalchemy.orm import declarative_base
 from contextlib import contextmanager
 
-
-
 class _SQLRaw:
     """Encapsula o resultado de uma query SQL Raw para permitir conversão em um pandas DataFrame."""
     def __init__(self, data: list):
@@ -26,8 +24,10 @@ class _SQLRaw:
 class _Query(Query):
     """Extensão da classe Query do SQLAlchemy com injeção dafuncionalidade de conversão para um pandas DataFrame."""
     
-    def to_df(self) -> pd.DataFrame:
-        """Converte o resultado da consulta atual em um DataFrame do Pandas.
+    def to_df(self, **kwargs) -> pd.DataFrame:
+        """
+        Converte o resultado da consulta atual em um DataFrame do Pandas.
+        Aceita qualquer argumento válido do construtor pd.DataFrame().
         
         Extrai o statement e o bind da sessão vinculada para realizar a leitura 
         direta via banco de dados, encerrando a sessão após a operação.
