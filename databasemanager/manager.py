@@ -165,6 +165,22 @@ class DatabaseManager:
             >>> db.sql_raw("SELECT * FROM usuarios WHERE ativo = :status", {"status": 1})
             [(1, 'Joaquim', 1), (2, 'Gustavo', 1)]
         """
+
+        # Intercepta e converte listas ou tuplas para dicionários
+        if isinstance(params, (list, tuple)):
+            params_dict = {}
+            for i, val in enumerate(params):
+                param_name = f"param_{i}"
+                params_dict[param_name] = val
+                
+                # Substitui a primeira ocorrência do marcador posicional pelo parâmetro nomeado
+                if '?' in query:
+                    query = query.replace('?', f':{param_name}', 1)
+                elif '%s' in query:
+                    query = query.replace('%s', f':{param_name}', 1)
+                    
+            params = params_dict
+            
         with self.session() as session:
             result = session.execute(text(query), params or {})
             return _SQLRaw(result.all())
