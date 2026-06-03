@@ -1,108 +1,168 @@
-DatabaseManager
+# Full DB Manager
 
-DatabaseManager é um componente de infraestrutura Python desenvolvido para simplificar a interação com múltiplos bancos de dados (PostgreSQL, SQL Server, MySQL, SQLite) através de uma interface fluida, simétrica e totalmente integrada ao Pandas.
+`full-db-manager` e uma biblioteca Python para simplificar conexoes SQLAlchemy,
+consultas SQL raw, consultas ORM e conversao direta de resultados para
+`pandas.DataFrame`.
 
-🚀 Diferenciais do Projeto
-Simetria Total: Mesma experiência de uso simultâneo para consultas ORM e SQL Puro.
+## Recursos
 
-Conversão Nativa: Método .to_df() injetado diretamente para obtenção rápida de dataframes.
+- Interface simples para SQL raw e ORM.
+- Conversao direta para DataFrame com `.to_df()`.
+- Gerenciamento transacional por contexto com commit e rollback automaticos.
+- Suporte a SQLite local e caminhos UNC no Windows.
+- Drivers de banco separados por extras opcionais.
 
-Gestão de Conexões: Gerenciamento automático de sessões (scoped sessions) e encerramento de conexões após a conversão para DataFrame.
+## Instalacao
 
-Suporte UNC: Compatibilidade nativa com caminhos de rede Windows (especial para bancos SQLite em rede).
+Instalacao base:
 
-🛠️ Tecnologias Utilizadas
-SQLAlchemy 2.0+: Motor de persistência e ORM.
+```bash
+pip install full-db-manager
+```
 
-Pandas: Estruturação de dados tabulares.
+Drivers opcionais:
 
-Python 3.10+: Tipagem moderna e performance.
+```bash
+pip install "full-db-manager[mssql]"
+pip install "full-db-manager[postgres]"
+pip install "full-db-manager[mysql]"
+```
 
-📋 Como Utilizar
-1. Inicialização e Conexão
+Ambiente de desenvolvimento:
+
+```bash
+pip install -e ".[dev]"
+```
+
+## Uso Basico
+
+```python
 from databasemanager import DatabaseManager
 
-A biblioteca fornece um metodo estático para criar a URL de conexão ao banco de dados automaticamente.
+url = DatabaseManager.build_url("sqlite", "app.db")
+db = DatabaseManager(url)
 
-# Construção de URL com suporte a SQL Server (UNC/Rede)
-url = DatabaseManager.build_url(
-    driver='mssql+pyodbc',
-    host='IP ou nome do servidor / caminho UNC / localhost',
-    database='nome do banco de dados',
-    user='nome de usuário',
-    password='senha',
+db.execute("CREATE TABLE usuarios (id INTEGER PRIMARY KEY, nome TEXT, ativo INTEGER)")
+db.execute(
+    "INSERT INTO usuarios (nome, ativo) VALUES (:nome, :ativo)",
+    {"nome": "Jose", "ativo": 1},
 )
 
-# Construção de URL com suporte a PostgreSQL
+df = db.query("SELECT id, nome FROM usuarios WHERE ativo = :ativo", {"ativo": 1}).to_df()
+```
+
+## URLs de Conexao
+
+SQLite local:
+
+```python
+url = DatabaseManager.build_url("sqlite", "C:/dados/app.db")
+```
+
+SQLite em caminho UNC:
+
+```python
+url = DatabaseManager.build_url("sqlite", r"\\SERVIDOR\compartilhada\app.db")
+```
+
+SQL Server:
+
+```python
 url = DatabaseManager.build_url(
-    driver='postgresql+psycopg2',
-    host='IP ou nome do servidor / caminho UNC / localhost',
-    database='nome do banco de dados',
-    user='nome de usuário',
-    password='senha',
+    "mssql+pyodbc",
+    database="SIVWIN",
+    user="sa",
+    password="senha",
+    host="192.168.1.10",
+    port="1433",
 )
+```
 
-# Construção de URL com suporte a MySQL
+PostgreSQL:
+
+```python
 url = DatabaseManager.build_url(
-    driver='mysql+pymysql',
-    host='IP ou nome do servidor / caminho UNC / localhost',
-    database='nome do banco de dados',
-    user='nome de usuário',
-    password='senha',
+    "postgresql+psycopg",
+    database="app",
+    user="postgres",
+    password="senha",
+    host="localhost",
+    port="5432",
 )
+```
 
-# Construção de URL com suporte a SQLite
+MySQL:
+
+```python
 url = DatabaseManager.build_url(
-    driver='sqlite://',
-    database='caminho do banco de dados',
+    "mysql+pymysql",
+    database="app",
+    user="root",
+    password="senha",
+    host="localhost",
+    port="3306",
 )
+```
 
-# Criada a string de conexão ao banco de dados, utiliza-a para criar o gerenciador de banco de dados.
-dbm = DatabaseManager(url)
+## Consultas e Comandos
 
-2. Gerenciamento de Models
-Pode-se utilizar um Base declarativo para  interagir com modelos de  tabelas no banco de dados.
+Use `query()` para consultas com retorno tabular:
 
-from databasemanager import DatabaseManager
-from models import Base
+```python
+df = db.query("SELECT id, nome FROM usuarios").to_df()
+```
 
-dbm = DatabaseManager("sqlite:///:memory:")
-dbm.create_all(Base.metadata)
-dbm.drop_all(Base.metadata)
+Use `execute()` para comandos sem retorno tabular:
 
+```python
+linhas = db.execute(
+    "UPDATE usuarios SET ativo = :ativo WHERE id = :id",
+    {"ativo": 0, "id": 1},
+)
+```
 
-3. Simetria de Interface
-O grande poder desta biblioteca reside na facilidade de transformar qualquer consulta em um DataFrame sem argumentos adicionais no final da cadeia.
+Use `execute_many()` para execucao em lote:
 
-Via ORM 
-query = dbm.orm(Usuario).filter(Usuario.nome.like('%Jose%')) # Objeto query
-df = query.to_df() # Transformação direta para DataFrame
+```python
+db.execute_many(
+    "INSERT INTO usuarios (nome) VALUES (:nome)",
+    [{"nome": "Jose"}, {"nome": "Maria"}],
+)
+```
 
-Via SQL Raw (Puro)
-query = dbm.sql_raw("SELECT * FROM usuarios WHERE ativo = 1") # Lista de tuplas no padrão SQL puro
-df = query.to_df() # Transformação direta para DataFrame
+`sql_raw()` permanece disponivel como alias de compatibilidade para `query()`.
+Para novos usos, prefira `query()` ou `sql_raw_select()`.
 
-Pode-se encadear as operações se o resultado esperado for direto em um DataFrame.
-df = dbm.sql_raw("SELECT * FROM usuarios WHERE ativo = 1").to_df()
-df = dbm.orm(Usuario).filter(Usuario.ativo == 1).to_df()
+## Sessoes ORM
 
+```python
+with db.session() as session:
+    session.add(usuario)
+```
 
-4. Operações Transacionais (Escopo de Sessão)
-Para operações de escrita (Insert/Update/Delete), utilize o gerenciador de contexto que garante o commit e close automáticos.
+Em caso de erro dentro do bloco, a transacao e revertida automaticamente.
 
-Python
-with dbm.session() as s:
-    novo_usuario = Usuario(nome="Jose Vitor")
-    s.add(novo_usuario)
+## Validacao de Conexao
 
-⚙️ Instalação Local
-Para instalar em modo de desenvolvimento no seu ambiente:
+Por padrao, `DatabaseManager` valida a conexao na inicializacao e levanta a
+excecao do SQLAlchemy se a conexao falhar.
 
+```python
+db = DatabaseManager(url, validate_connection=True)
+```
 
-Bash
-# Clone o repositório e na raiz execute:
-pip install -e .
+Para adiar a conexao ate o primeiro uso:
 
+```python
+db = DatabaseManager(url, validate_connection=False)
+```
 
-📝 Licença
-Este projeto foi desenvolvido por Jose Vitor Alves Coelho.
+## Testes
+
+```bash
+python -m pytest
+```
+
+## Licenca
+
+Distribuido sob a licenca MIT.

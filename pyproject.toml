@@ -3,23 +3,41 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "databasemanager"
+name = "full-db-manager"
 version = "0.1.0"
-description = "Gerenciador de banco de dados fluido para integração com Pandas e ORM."
+description = "Gerenciador de banco de dados multiplos para integração com Pandas e ORM."
 authors = [
-    {name = "Jose Vitor Alves Coelho", email = "seu-email@exemplo.com"}
+    {name = "Jose Vitor Alves Coelho"}
 ]
 readme = "README.md"
+license = {text = "MIT"}
 requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 dependencies = [
     "sqlalchemy>=2.0.0",
-    "pandas>=2.0.0",
-    "pyodbc>=5.0.0"
+    "pandas>=2.0.0"
 ]
 
+[project.optional-dependencies]
+mssql = ["pyodbc>=5.0.0"]
+postgres = ["psycopg>=3.0.0"]
+mysql = ["pymysql>=1.1.0"]
+dev = [
+    "build>=1.2.0",
+    "pytest>=8.0.0",
+    "twine>=5.0.0"
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
